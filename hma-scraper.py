@@ -3,10 +3,11 @@
 from __future__ import print_function
 import requests
 import re
+import json
 import sys
 
 def scrape_hma(uri):
-    r = requests.get('http://proxylist.hidemyass.com/'+uri)
+    r = requests.get('http://proxylist.hidemyass.com/search-1300537/' + uri + '#listable')
     bad_class="("
     for line in r.text.splitlines():
         class_name = re.search(r'\.([a-zA-Z0-9_\-]{4})\{display:none\}', line)
@@ -24,24 +25,28 @@ def scrape_hma(uri):
 
     proxy_src = re.findall('([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})\s*</td>\s*<td>\s*([0-9]{2,6}).{100,1200}(socks4/5|HTTPS?)', junk)
     
-    list = ''
+    proxyList = []
     for src in proxy_src:
         if src[2] == 'socks4/5':
             proto = 'socks5h'
         else:
             proto = src[2].lower()
         if src:
-            list += proto + '://' +src[0] + ':' + src[1] + '\n'
-    return(list)
+            proxyList.append(proto + '://' +src[0] + ':' + src[1])
+
+    return proxyList
 
 if __name__ == "__main__":
     error = 'Input the number of pages to scrape. Ex:\npython hma-scraper.py 30'
-    try:
-        if sys.argv[1].isdigit() == True:
-            input = int(sys.argv[1])
-            for i in range(1,input):
-                print(scrape_hma(str(i)), end = '')
-        else:
-            print(error)
-    except:
+    proxyList = []
+
+    if sys.argv[1].isdigit() == True:
+        input = int(sys.argv[1])
+        for i in range(1,input):
+            proxyList += scrape_hma(str(i))
+    else:
         print(error)
+
+    if proxyList:
+        with open('../http_proxy_list.json', 'wb') as output:
+            output.write(json.dumps(proxyList))
